@@ -17,23 +17,9 @@ interface RecordItem {
   duration: number
 }
 
-function getUserIdFromUrlOrLocal() {
-  const params = new URLSearchParams(window.location.search);
-  const urlUser = params.get('user');
-  if (urlUser) {
-    localStorage.setItem('user_id', urlUser);
-    return urlUser;
-  }
-  let id = localStorage.getItem('user_id');
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem('user_id', id);
-  }
-  return id;
-}
-
 function App() {
-  const userId = getUserIdFromUrlOrLocal();
+  const [user, setUser] = useState<User | null>(null)
+  const userId = user?.id
   const [records, setRecords] = useState<RecordItem[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [startTime, setStartTime] = useState<number | null>(null)
@@ -47,7 +33,6 @@ function App() {
   const [adding, setAdding] = useState(false)
   const [openDetail, setOpenDetail] = useState<string | null>(null)
   const [showManualInput, setShowManualInput] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
 
   // 날짜별로 기록 그룹핑 (KST 기준)
   const recordsByDate: { [date: string]: RecordItem[] } = {}
@@ -64,6 +49,7 @@ function App() {
 
   // Supabase에서 기록 불러오기
   useEffect(() => {
+    if (!userId) return;
     (async () => {
       const { data } = await supabase
         .from('records')
@@ -102,7 +88,7 @@ function App() {
   const handleStop = async () => {
     setIsRunning(false)
     if (timerId) clearInterval(timerId)
-    if (startTime) {
+    if (startTime && userId) {
       const end = Date.now()
       const duration = Math.floor((end - startTime) / 1000)
       const { data } = await supabase.from('records').insert([
@@ -117,7 +103,8 @@ function App() {
   // 기록 삭제
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
-    await supabase.from('records').delete().eq('id', id)
+    if (!userId) return
+    await supabase.from('records').delete().eq('id', id).eq('user_id', userId)
     setRecords(records.filter(r => r.id !== id))
   }
 
@@ -127,7 +114,8 @@ function App() {
     if (!newSec) return
     const sec = parseInt(newSec)
     if (isNaN(sec) || sec < 0) return alert('올바른 숫자를 입력하세요.')
-    await supabase.from('records').update({ duration: sec }).eq('id', id)
+    if (!userId) return
+    await supabase.from('records').update({ duration: sec }).eq('id', id).eq('user_id', userId)
     setRecords(records.map(r => r.id === id ? { ...r, duration: sec } : r))
   }
 
@@ -144,6 +132,7 @@ function App() {
       alert('양의 정수를 입력하세요.')
       return
     }
+    if (!userId) return
     setAdding(true)
     const ms = getKstMs(manualDate)
     const { data } = await supabase.from('records').insert([
@@ -155,7 +144,7 @@ function App() {
   }
 
   // 내 기록 공유 링크
-  const shareUrl = `${window.location.origin}${window.location.pathname}?user=${userId}`;
+  const shareUrl = `${window.location.origin}${window.location.pathname}`;
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl)
     alert('공유 링크가 복사되었습니다!')
