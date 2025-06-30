@@ -152,25 +152,38 @@ function App() {
       <div style={{ margin: '0 0 32px 0', textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>오늘 누적 시간</div>
         <div style={{ fontSize: 40, fontWeight: 900, color: '#222', marginBottom: 24 }}>{formatTime(todayTotal)}</div>
-        <div className="stopwatch-circle" style={{ margin: '0 auto 16px auto', width: 180, height: 180, background: '#222', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="stopwatch-time" style={{ fontSize: 32, fontWeight: 800, color: 'white', marginBottom: 18 }}>{formatTime(isRunning ? elapsed : 0)}</div>
+        <div className="stopwatch-circle" style={{
+          margin: '0 auto 16px auto',
+          width: 320,
+          height: 320,
+          background: '#222',
+          borderRadius: '50%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{ fontSize: 22, fontWeight: 500, color: 'white', marginBottom: 12, letterSpacing: '-1px' }}>시간 합계</div>
+          <div style={{ fontSize: 48, fontWeight: 800, color: 'white', marginBottom: 32, letterSpacing: '2px' }}>{formatTime(isRunning ? elapsed : 0)}</div>
           <button
             className="stopwatch-btn"
             onClick={isRunning ? handleStop : handleStart}
             style={{
-              fontSize: 24,
+              fontSize: 26,
               fontWeight: 700,
-              padding: '16px 32px',
-              width: 'auto',
-              borderRadius: 24,
-              marginTop: 0,
-              marginBottom: 0,
-              background: isRunning ? '#ff4d4f' : '#fff',
-              color: isRunning ? 'white' : '#646cff',
-              border: isRunning ? 'none' : '2px solid #646cff',
+              padding: '18px 48px',
+              borderRadius: 999,
+              background: '#fff',
+              color: '#222',
+              border: 'none',
               boxShadow: '0 2px 8px #0002',
               cursor: 'pointer',
-              transition: 'background 0.2s, color 0.2s'
+              transition: 'background 0.2s, color 0.2s',
+              outline: 'none',
+              letterSpacing: '0.5px',
+              marginTop: 0,
+              marginBottom: 0,
+              display: 'block',
             }}
           >
             {isRunning ? '종료' : '시작'}
