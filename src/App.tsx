@@ -47,7 +47,6 @@ function App() {
   const [adding, setAdding] = useState(false)
   const [openDetail, setOpenDetail] = useState<string | null>(null)
   const [showManualInput, setShowManualInput] = useState(false)
-  const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
 
   // 날짜별로 기록 그룹핑 (KST 기준)
@@ -78,11 +77,9 @@ function App() {
   // Supabase Auth 세션 관리
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
       setUser(session?.user ?? null)
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
       setUser(session?.user ?? null)
     })
     return () => {
