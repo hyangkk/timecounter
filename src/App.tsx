@@ -152,24 +152,6 @@ function App() {
           📋 내 기록 공유 링크 복사
         </button>
       </div>
-      {/* 수동 기록 입력 UI */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-        <input
-          type="number"
-          min={1}
-          placeholder="초 단위로 입력"
-          value={manualSec}
-          onChange={e => setManualSec(e.target.value)}
-          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 140 }}
-        />
-        <button
-          onClick={handleAddManual}
-          disabled={adding}
-          style={{ fontSize: 18, fontWeight: 600, padding: '10px 24px', borderRadius: 8, background: '#1a1a1a', color: 'white', border: 'none', cursor: 'pointer' }}
-        >
-          기록 추가
-        </button>
-      </div>
       <h2 style={{ textAlign: 'center', margin: '24px 0 8px 0' }}>오늘 누적 시간</h2>
       <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(todayTotal)}</div>
       <div className="stopwatch-circle">
@@ -197,13 +179,33 @@ function App() {
         <ul>
           {todayRecords.map((rec) => (
             <li key={rec.id}>
-              {formatTime(rec.duration)} (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})
+              {formatTime(rec.duration)}
+              {rec.start !== rec.end && (
+                <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
+              )}
               <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
               <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
             </li>
           ))}
         </ul>
       )}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '32px 0 0 0' }}>
+        <input
+          type="number"
+          min={1}
+          placeholder="초 단위로 입력"
+          value={manualSec}
+          onChange={e => setManualSec(e.target.value)}
+          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 140 }}
+        />
+        <button
+          onClick={handleAddManual}
+          disabled={adding}
+          style={{ fontSize: 18, fontWeight: 600, padding: '10px 24px', borderRadius: 8, background: '#1a1a1a', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
+          기록 추가
+        </button>
+      </div>
     </div>
   )
 }
