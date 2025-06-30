@@ -50,7 +50,7 @@ function App() {
   // Supabase에서 기록 불러오기
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('records')
         .select('*')
         .eq('user_id', userId)
@@ -77,7 +77,7 @@ function App() {
       const end = Date.now()
       const duration = Math.floor((end - startTime) / 1000)
       // Supabase에 기록 추가
-      const { data, error } = await supabase.from('records').insert([
+      const { data } = await supabase.from('records').insert([
         { user_id: userId, start: startTime, end, duration }
       ]).select()
       if (data) setRecords([data[0], ...records])
