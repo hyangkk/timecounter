@@ -47,6 +47,10 @@ function App() {
   })
   const todayTotal = todayRecords.reduce((acc, cur) => acc + cur.duration, 0)
 
+  // 수동 기록 입력 상태
+  const [manualSec, setManualSec] = useState('')
+  const [adding, setAdding] = useState(false)
+
   // Supabase에서 기록 불러오기
   useEffect(() => {
     (async () => {
@@ -110,6 +114,23 @@ function App() {
     alert('공유 링크가 복사되었습니다!')
   }
 
+  // 수동 기록 추가
+  const handleAddManual = async () => {
+    const sec = parseInt(manualSec)
+    if (isNaN(sec) || sec <= 0) {
+      alert('양의 정수를 입력하세요.')
+      return
+    }
+    setAdding(true)
+    const now = Date.now()
+    const { data } = await supabase.from('records').insert([
+      { user_id: userId, start: now, end: now, duration: sec }
+    ]).select()
+    if (data) setRecords([data[0], ...records])
+    setManualSec('')
+    setAdding(false)
+  }
+
   return (
     <div className="container">
       <div style={{ margin: '0 0 24px 0', textAlign: 'center' }}>
@@ -131,11 +152,41 @@ function App() {
           📋 내 기록 공유 링크 복사
         </button>
       </div>
+      {/* 수동 기록 입력 UI */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+        <input
+          type="number"
+          min={1}
+          placeholder="초 단위로 입력"
+          value={manualSec}
+          onChange={e => setManualSec(e.target.value)}
+          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 140 }}
+        />
+        <button
+          onClick={handleAddManual}
+          disabled={adding}
+          style={{ fontSize: 18, fontWeight: 600, padding: '10px 24px', borderRadius: 8, background: '#1a1a1a', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
+          기록 추가
+        </button>
+      </div>
       <h2 style={{ textAlign: 'center', margin: '24px 0 8px 0' }}>오늘 누적 시간</h2>
       <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(todayTotal)}</div>
       <div className="stopwatch-circle">
         <div className="stopwatch-time">{formatTime(isRunning ? elapsed : 0)}</div>
-        <button className="stopwatch-btn" onClick={isRunning ? handleStop : handleStart}>
+        <button
+          className="stopwatch-btn"
+          onClick={isRunning ? handleStop : handleStart}
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            padding: '24px 0',
+            width: 220,
+            borderRadius: 32,
+            marginTop: 18,
+            marginBottom: 8
+          }}
+        >
           {isRunning ? '종료' : '시작'}
         </button>
       </div>
