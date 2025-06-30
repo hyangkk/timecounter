@@ -33,6 +33,12 @@ function getUserIdFromUrlOrLocal() {
 
 function App() {
   const userId = getUserIdFromUrlOrLocal();
+  const [records, setRecords] = useState<RecordItem[]>([])
+  // 스톱워치 상태 복구
+  const [isRunning, setIsRunning] = useState(false)
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [timerId, setTimerId] = useState<number | null>(null)
 
   // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
@@ -44,7 +50,6 @@ function App() {
 
   // 날짜별로 기록 그룹핑
   const recordsByDate: { [date: string]: RecordItem[] } = {}
-  const [records, setRecords] = useState<RecordItem[]>([])
   records.forEach(r => {
     const d = new Date(r.start)
     const dateStr = d.toISOString().slice(0, 10)
@@ -65,6 +70,33 @@ function App() {
     })()
   }, [userId])
 
+  // 스톱워치 시작
+  const handleStart = () => {
+    setIsRunning(true)
+    const now = Date.now()
+    setStartTime(now)
+    const id = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - now) / 1000))
+    }, 1000)
+    setTimerId(id)
+  }
+
+  // 스톱워치 종료
+  const handleStop = async () => {
+    setIsRunning(false)
+    if (timerId) clearInterval(timerId)
+    if (startTime) {
+      const end = Date.now()
+      const duration = Math.floor((end - startTime) / 1000)
+      const { data } = await supabase.from('records').insert([
+        { user_id: userId, start: startTime, end, duration }
+      ]).select()
+      if (data) setRecords([data[0], ...records])
+      setElapsed(0)
+      setStartTime(null)
+    }
+  }
+
   // 기록 삭제
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
@@ -82,13 +114,6 @@ function App() {
     setRecords(records.map(r => r.id === id ? { ...r, duration: sec } : r))
   }
 
-  // 내 기록 공유 링크
-  const shareUrl = `${window.location.origin}${window.location.pathname}?user=${userId}`;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl)
-    alert('공유 링크가 복사되었습니다!')
-  }
-
   // KST 기준 날짜를 ms로 변환
   function getKstMs(dateStr: string) {
     const [y, m, d] = dateStr.split('-').map(Number)
@@ -103,7 +128,6 @@ function App() {
       return
     }
     setAdding(true)
-    // KST 기준 날짜의 00:00:00
     const ms = getKstMs(manualDate)
     const { data } = await supabase.from('records').insert([
       { user_id: userId, start: ms, end: ms, duration: sec }
@@ -111,6 +135,13 @@ function App() {
     if (data) setRecords([data[0], ...records])
     setManualSec('')
     setAdding(false)
+  }
+
+  // 내 기록 공유 링크
+  const shareUrl = `${window.location.origin}${window.location.pathname}?user=${userId}`;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl)
+    alert('공유 링크가 복사되었습니다!')
   }
 
   return (
@@ -156,6 +187,24 @@ function App() {
           })}
         </tbody>
       </table>
+      <div className="stopwatch-circle">
+        <div className="stopwatch-time">{formatTime(isRunning ? elapsed : 0)}</div>
+        <button
+          className="stopwatch-btn"
+          onClick={isRunning ? handleStop : handleStart}
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            padding: '24px 0',
+            width: 220,
+            borderRadius: 32,
+            marginTop: 18,
+            marginBottom: 8
+          }}
+        >
+          {isRunning ? '종료' : '시작'}
+        </button>
+      </div>
       <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>날짜별 기록</div>
       {sortedDates.length === 0 ? (
         <div style={{color:'#aaa', textAlign:'center'}}>기록 없음</div>
