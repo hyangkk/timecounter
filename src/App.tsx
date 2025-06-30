@@ -160,8 +160,8 @@ function App() {
             style={{
               fontSize: 24,
               fontWeight: 700,
-              padding: '16px 0',
-              width: 140,
+              padding: '16px 32px',
+              width: 'auto',
               borderRadius: 24,
               marginTop: 0,
               marginBottom: 0,
