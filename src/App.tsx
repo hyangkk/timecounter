@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { supabase } from './supabaseClient'
 import './App.css'
 
 function formatTime(sec: number) {
@@ -15,48 +16,48 @@ interface RecordItem {
   duration: number
 }
 
+function getUserIdFromUrlOrLocal() {
+  const params = new URLSearchParams(window.location.search);
+  const urlUser = params.get('user');
+  if (urlUser) {
+    localStorage.setItem('user_id', urlUser);
+    return urlUser;
+  }
+  let id = localStorage.getItem('user_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('user_id', id);
+  }
+  return id;
+}
+
 function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [startTime, setStartTime] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [records, setRecords] = useState<RecordItem[]>([])
   const timerRef = useRef<number | null>(null)
+  const userId = getUserIdFromUrlOrLocal();
 
   // 오늘 날짜(yyyy-mm-dd)
   const todayStr = new Date().toISOString().slice(0, 10)
-
-  // 오늘 기록만 필터
   const todayRecords = records.filter(r => {
     const d = new Date(r.start)
     return d.toISOString().slice(0, 10) === todayStr
   })
-
-  // 오늘 누적 시간(초)
   const todayTotal = todayRecords.reduce((acc, cur) => acc + cur.duration, 0)
 
-  // localStorage에서 기록 불러오기
+  // Supabase에서 기록 불러오기
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('records')
-      alert('localStorage records 값: ' + saved)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setRecords(parsed)
-          console.log('localStorage에서 불러온 기록:', parsed)
-        }
-      }
-    } catch (e) {
-      setRecords([])
-      console.error('localStorage 파싱 에러', e)
-    }
-  }, [])
-
-  // 기록이 바뀔 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('records', JSON.stringify(records))
-    console.log('localStorage에 저장된 기록:', records)
-  }, [records])
+    (async () => {
+      const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('user_id', userId)
+        .order('start', { ascending: false })
+      if (data) setRecords(data)
+    })()
+  }, [userId])
 
   // 스톱워치 시작
   const handleStart = () => {
@@ -69,38 +70,67 @@ function App() {
   }
 
   // 스톱워치 종료
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsRunning(false)
     if (timerRef.current) clearInterval(timerRef.current)
     if (startTime) {
       const end = Date.now()
       const duration = Math.floor((end - startTime) / 1000)
-      setRecords([
-        { id: Date.now(), start: startTime, end, duration },
-        ...records,
-      ])
+      // Supabase에 기록 추가
+      const { data, error } = await supabase.from('records').insert([
+        { user_id: userId, start: startTime, end, duration }
+      ]).select()
+      if (data) setRecords([data[0], ...records])
       setElapsed(0)
       setStartTime(null)
     }
   }
 
   // 기록 삭제
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
+    await supabase.from('records').delete().eq('id', id)
     setRecords(records.filter(r => r.id !== id))
   }
 
   // 기록 수정
-  const handleEdit = (id: number) => {
+  const handleEdit = async (id: number) => {
     const newSec = prompt('수정할 시간을 초 단위로 입력하세요:')
     if (!newSec) return
     const sec = parseInt(newSec)
     if (isNaN(sec) || sec < 0) return alert('올바른 숫자를 입력하세요.')
+    await supabase.from('records').update({ duration: sec }).eq('id', id)
     setRecords(records.map(r => r.id === id ? { ...r, duration: sec } : r))
+  }
+
+  // 내 기록 공유 링크
+  const shareUrl = `${window.location.origin}${window.location.pathname}?user=${userId}`;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl)
+    alert('공유 링크가 복사되었습니다!')
   }
 
   return (
     <div className="container">
+      <div style={{ margin: '0 0 24px 0', textAlign: 'center' }}>
+        <button 
+          onClick={handleCopy}
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            padding: '14px 32px',
+            background: '#646cff',
+            color: 'white',
+            border: 'none',
+            borderRadius: 12,
+            boxShadow: '0 2px 8px #0002',
+            cursor: 'pointer',
+            marginBottom: 12
+          }}
+        >
+          📋 내 기록 공유 링크 복사
+        </button>
+      </div>
       <h2 style={{ textAlign: 'center', margin: '24px 0 8px 0' }}>오늘 누적 시간</h2>
       <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(todayTotal)}</div>
       <div className="stopwatch-circle">
