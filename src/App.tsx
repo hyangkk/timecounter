@@ -49,7 +49,21 @@ function App() {
 
   // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
+  const [manualDate, setManualDate] = useState(() => {
+    const today = new Date()
+    return today.toISOString().slice(0, 10)
+  })
   const [adding, setAdding] = useState(false)
+
+  // 날짜별로 기록 그룹핑
+  const recordsByDate: { [date: string]: RecordItem[] } = {}
+  records.forEach(r => {
+    const d = new Date(r.start)
+    const dateStr = d.toISOString().slice(0, 10)
+    if (!recordsByDate[dateStr]) recordsByDate[dateStr] = []
+    recordsByDate[dateStr].push(r)
+  })
+  const sortedDates = Object.keys(recordsByDate).sort((a, b) => b.localeCompare(a))
 
   // Supabase에서 기록 불러오기
   useEffect(() => {
@@ -122,9 +136,11 @@ function App() {
       return
     }
     setAdding(true)
-    const now = Date.now()
+    // 선택한 날짜의 00:00:00 기준 timestamp
+    const date = new Date(manualDate + 'T00:00:00')
+    const ms = date.getTime()
     const { data } = await supabase.from('records').insert([
-      { user_id: userId, start: now, end: now, duration: sec }
+      { user_id: userId, start: ms, end: ms, duration: sec }
     ]).select()
     if (data) setRecords([data[0], ...records])
     setManualSec('')
@@ -172,22 +188,33 @@ function App() {
           {isRunning ? '종료' : '시작'}
         </button>
       </div>
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>오늘의 기록</div>
-      {todayRecords.length === 0 ? (
-        <div style={{color:'#aaa', textAlign:'center'}}>오늘 기록 없음</div>
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>날짜별 기록</div>
+      {sortedDates.length === 0 ? (
+        <div style={{color:'#aaa', textAlign:'center'}}>기록 없음</div>
       ) : (
-        <ul>
-          {todayRecords.map((rec) => (
-            <li key={rec.id}>
-              {formatTime(rec.duration)}
-              {rec.start !== rec.end && (
-                <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
-              )}
-              <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
-              <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
-            </li>
-          ))}
-        </ul>
+        <div>
+          {sortedDates.map(dateStr => {
+            const list = recordsByDate[dateStr]
+            const total = list.reduce((acc, cur) => acc + cur.duration, 0)
+            return (
+              <div key={dateStr} style={{ marginBottom: 24 }}>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{dateStr} (누적 {formatTime(total)})</div>
+                <ul>
+                  {list.map((rec) => (
+                    <li key={rec.id}>
+                      {formatTime(rec.duration)}
+                      {rec.start !== rec.end && (
+                        <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
+                      )}
+                      <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
+                      <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+        </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '32px 0 0 0' }}>
         <input
@@ -197,6 +224,12 @@ function App() {
           value={manualSec}
           onChange={e => setManualSec(e.target.value)}
           style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 140 }}
+        />
+        <input
+          type="date"
+          value={manualDate}
+          onChange={e => setManualDate(e.target.value)}
+          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8 }}
         />
         <button
           onClick={handleAddManual}
