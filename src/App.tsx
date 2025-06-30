@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import './App.css'
+import type { Session, User } from '@supabase/supabase-js'
 
 function formatTime(sec: number) {
   const h = String(Math.floor(sec / 3600)).padStart(2, '0')
@@ -46,6 +47,8 @@ function App() {
   const [adding, setAdding] = useState(false)
   const [openDetail, setOpenDetail] = useState<string | null>(null)
   const [showManualInput, setShowManualInput] = useState(false)
+  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<User | null>(null)
 
   // 날짜별로 기록 그룹핑 (KST 기준)
   const recordsByDate: { [date: string]: RecordItem[] } = {}
@@ -71,6 +74,21 @@ function App() {
       if (data) setRecords(data)
     })()
   }, [userId])
+
+  // Supabase Auth 세션 관리
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+    })
+    return () => {
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   // 스톱워치 시작
   const handleStart = () => {
@@ -144,6 +162,27 @@ function App() {
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl)
     alert('공유 링크가 복사되었습니다!')
+  }
+
+  // 구글 로그인
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google' })
+  }
+  // 로그아웃
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  // 로그인 상태가 아니면 로그인 버튼과 제목만 노출
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f7f7f7' }}>
+        <div style={{ fontSize: 32, fontWeight: 900, marginBottom: 40, color: '#222', letterSpacing: '-1px' }}>업무 시간 기록</div>
+        <button onClick={handleLogin} style={{ fontSize: 20, fontWeight: 700, padding: '16px 40px', borderRadius: 12, background: '#fff', color: '#222', border: '1px solid #bbb', boxShadow: '0 2px 8px #0001', cursor: 'pointer' }}>
+          Google로 로그인
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -292,6 +331,12 @@ function App() {
             </button>
           </>
         )}
+      </div>
+      {/* 로그아웃 버튼 - 맨 아래 */}
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '40px 0 0 0' }}>
+        <button onClick={handleLogout} style={{ fontSize: 16, fontWeight: 700, padding: '12px 36px', borderRadius: 12, background: '#eee', color: '#333', border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px #0001' }}>
+          로그아웃
+        </button>
       </div>
     </div>
   )
