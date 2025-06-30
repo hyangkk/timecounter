@@ -44,6 +44,8 @@ function App() {
     return today.toISOString().slice(0, 10)
   })
   const [adding, setAdding] = useState(false)
+  const [openDetail, setOpenDetail] = useState<string | null>(null)
+  const [showManualInput, setShowManualInput] = useState(false)
 
   // 날짜별로 기록 그룹핑 (KST 기준)
   const recordsByDate: { [date: string]: RecordItem[] } = {}
@@ -150,25 +152,25 @@ function App() {
       <div style={{ margin: '0 0 32px 0', textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>오늘 누적 시간</div>
         <div style={{ fontSize: 40, fontWeight: 900, color: '#222', marginBottom: 24 }}>{formatTime(todayTotal)}</div>
-        <div className="stopwatch-circle" style={{ margin: '0 auto 16px auto', width: 260, height: 260, background: '#222', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="stopwatch-time" style={{ fontSize: 38, fontWeight: 800, color: 'white', marginBottom: 24 }}>{formatTime(isRunning ? elapsed : 0)}</div>
+        <div className="stopwatch-circle" style={{ margin: '0 auto 16px auto', width: 180, height: 180, background: '#222', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="stopwatch-time" style={{ fontSize: 32, fontWeight: 800, color: 'white', marginBottom: 18 }}>{formatTime(isRunning ? elapsed : 0)}</div>
           <button
             className="stopwatch-btn"
             onClick={isRunning ? handleStop : handleStart}
             style={{
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: 700,
-              padding: '24px 0',
-              width: 220,
-              borderRadius: 32,
+              padding: '16px 0',
+              width: 140,
+              borderRadius: 24,
               marginTop: 0,
               marginBottom: 0,
-              background: isRunning ? '#ff4d4f' : '#646cff',
-              color: 'white',
-              border: 'none',
+              background: isRunning ? '#ff4d4f' : '#fff',
+              color: isRunning ? 'white' : '#646cff',
+              border: isRunning ? 'none' : '2px solid #646cff',
               boxShadow: '0 2px 8px #0002',
               cursor: 'pointer',
-              transition: 'background 0.2s'
+              transition: 'background 0.2s, color 0.2s'
             }}
           >
             {isRunning ? '종료' : '시작'}
@@ -192,79 +194,104 @@ function App() {
           📋 내 기록 공유 링크 복사
         </button>
       </div>
-      {/* 과거 날짜별 누적 시간 표 */}
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>과거 날짜별 누적 시간</div>
+      {/* 오늘의 기록 펼쳐서 모두 보여주기 */}
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>오늘의 기록</div>
+      {recordsByDate[todayStr] && recordsByDate[todayStr].length > 0 ? (
+        <ul>
+          {recordsByDate[todayStr].map((rec) => (
+            <li key={rec.id}>
+              {formatTime(rec.duration)}
+              {rec.start !== rec.end && (
+                <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
+              )}
+              <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
+              <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div style={{color:'#aaa', textAlign:'center'}}>오늘 기록 없음</div>
+      )}
+      {/* 과거 날짜별 누적 시간 표 + 자세히 보기 */}
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>과거 기록</div>
       <table style={{ width: '100%', maxWidth: 400, margin: '0 auto 24px auto', borderCollapse: 'collapse', background: '#fafbfc' }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
             <th style={{ padding: 8, border: '1px solid #ddd' }}>날짜</th>
             <th style={{ padding: 8, border: '1px solid #ddd' }}>누적 시간</th>
+            <th style={{ padding: 8, border: '1px solid #ddd' }}></th>
           </tr>
         </thead>
         <tbody>
           {sortedDates.filter(dateStr => dateStr !== todayStr).map(dateStr => {
             const total = recordsByDate[dateStr].reduce((acc, cur) => acc + cur.duration, 0)
             return (
-              <tr key={dateStr}>
-                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{dateStr}</td>
-                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{formatTime(total)}</td>
-              </tr>
+              <>
+                <tr key={dateStr}>
+                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{dateStr}</td>
+                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{formatTime(total)}</td>
+                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
+                    <button onClick={() => setOpenDetail(openDetail === dateStr ? null : dateStr)} style={{fontSize:15, fontWeight:600, padding:'6px 16px', borderRadius:6, border:'1px solid #aaa', background:'#fff', cursor:'pointer'}}>
+                      {openDetail === dateStr ? '닫기' : '자세히 보기'}
+                    </button>
+                  </td>
+                </tr>
+                {openDetail === dateStr && (
+                  <tr>
+                    <td colSpan={3} style={{ background:'#f9f9f9', padding:12 }}>
+                      <ul style={{margin:0}}>
+                        {recordsByDate[dateStr].map((rec) => (
+                          <li key={rec.id}>
+                            {formatTime(rec.duration)}
+                            {rec.start !== rec.end && (
+                              <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
+                            )}
+                            <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
+                            <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                )}
+              </>
             )
           })}
         </tbody>
       </table>
-      {/* 날짜별 기록 상세 */}
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>날짜별 기록</div>
-      {sortedDates.length === 0 ? (
-        <div style={{color:'#aaa', textAlign:'center'}}>기록 없음</div>
-      ) : (
-        <div>
-          {sortedDates.map(dateStr => {
-            const list = recordsByDate[dateStr]
-            const total = list.reduce((acc, cur) => acc + cur.duration, 0)
-            return (
-              <div key={dateStr} style={{ marginBottom: 24 }}>
-                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{dateStr} (누적 {formatTime(total)})</div>
-                <ul>
-                  {list.map((rec) => (
-                    <li key={rec.id}>
-                      {formatTime(rec.duration)}
-                      {rec.start !== rec.end && (
-                        <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
-                      )}
-                      <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
-                      <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
-        </div>
-      )}
       {/* 수동 기록 입력 UI - 맨 아래 */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '32px 0 0 0' }}>
-        <input
-          type="number"
-          min={1}
-          placeholder="초 단위로 입력"
-          value={manualSec}
-          onChange={e => setManualSec(e.target.value)}
-          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 140 }}
-        />
-        <input
-          type="date"
-          value={manualDate}
-          onChange={e => setManualDate(e.target.value)}
-          style={{ fontSize: 18, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8 }}
-        />
         <button
-          onClick={handleAddManual}
-          disabled={adding}
-          style={{ fontSize: 18, fontWeight: 600, padding: '10px 24px', borderRadius: 8, background: '#1a1a1a', color: 'white', border: 'none', cursor: 'pointer' }}
+          onClick={() => setShowManualInput(v => !v)}
+          style={{ fontSize: 15, fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#f5f5f5', color: '#333', border: '1px solid #bbb', cursor: 'pointer', marginRight: 8 }}
         >
-          기록 추가
+          수동 기록 추가
         </button>
+        {showManualInput && (
+          <>
+            <input
+              type="number"
+              min={1}
+              placeholder="초 단위로 입력"
+              value={manualSec}
+              onChange={e => setManualSec(e.target.value)}
+              style={{ fontSize: 16, padding: '6px 10px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8, width: 100 }}
+            />
+            <input
+              type="date"
+              value={manualDate}
+              onChange={e => setManualDate(e.target.value)}
+              style={{ fontSize: 16, padding: '6px 10px', borderRadius: 8, border: '1px solid #ccc', marginRight: 8 }}
+            />
+            <button
+              onClick={handleAddManual}
+              disabled={adding}
+              style={{ fontSize: 15, fontWeight: 600, padding: '8px 18px', borderRadius: 8, background: '#1a1a1a', color: 'white', border: 'none', cursor: 'pointer' }}
+            >
+              입력
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
