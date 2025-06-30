@@ -34,9 +34,6 @@ function getUserIdFromUrlOrLocal() {
 function App() {
   const userId = getUserIdFromUrlOrLocal();
 
-  // 오늘 날짜(yyyy-mm-dd)
-  const todayStr = new Date().toISOString().slice(0, 10)
-
   // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
   const [manualDate, setManualDate] = useState(() => {
