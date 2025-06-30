@@ -143,13 +143,6 @@ function App() {
     setAdding(false)
   }
 
-  // 내 기록 공유 링크
-  const shareUrl = `${window.location.origin}${window.location.pathname}`;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl)
-    alert('공유 링크가 복사되었습니다!')
-  }
-
   // 구글 로그인
   const handleLogin = async () => {
     await supabase.auth.signInWithOAuth({ provider: 'google' })
@@ -215,23 +208,6 @@ function App() {
             {isRunning ? '종료' : '시작'}
           </button>
         </div>
-        <button 
-          onClick={handleCopy}
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            padding: '10px 24px',
-            background: '#eaeaea',
-            color: '#333',
-            border: 'none',
-            borderRadius: 8,
-            boxShadow: '0 2px 8px #0001',
-            cursor: 'pointer',
-            marginTop: 18
-          }}
-        >
-          📋 내 기록 공유 링크 복사
-        </button>
       </div>
       {/* 날짜별 누적 시간 표 + 자세히 보기 (오늘 포함, 오늘이 맨 위) */}
       <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>기록</div>
