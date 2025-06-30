@@ -32,17 +32,10 @@ function getUserIdFromUrlOrLocal() {
 }
 
 function App() {
-  const [startTime, setStartTime] = useState<number | null>(null)
-  const [records, setRecords] = useState<RecordItem[]>([])
-  const timerRef = useRef<number | null>(null)
   const userId = getUserIdFromUrlOrLocal();
 
   // 오늘 날짜(yyyy-mm-dd)
   const todayStr = new Date().toISOString().slice(0, 10)
-  const todayRecords = records.filter(r => {
-    const d = new Date(r.start)
-    return d.toISOString().slice(0, 10) === todayStr
-  })
 
   // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
@@ -54,6 +47,7 @@ function App() {
 
   // 날짜별로 기록 그룹핑
   const recordsByDate: { [date: string]: RecordItem[] } = {}
+  const [records, setRecords] = useState<RecordItem[]>([])
   records.forEach(r => {
     const d = new Date(r.start)
     const dateStr = d.toISOString().slice(0, 10)
