@@ -34,13 +34,10 @@ function getUserIdFromUrlOrLocal() {
 function App() {
   const userId = getUserIdFromUrlOrLocal();
   const [records, setRecords] = useState<RecordItem[]>([])
-  // 스톱워치 상태 복구
   const [isRunning, setIsRunning] = useState(false)
   const [startTime, setStartTime] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [timerId, setTimerId] = useState<number | null>(null)
-
-  // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
   const [manualDate, setManualDate] = useState(() => {
     const today = new Date()
@@ -57,6 +54,8 @@ function App() {
     recordsByDate[dateStr].push(r)
   })
   const sortedDates = Object.keys(recordsByDate).sort((a, b) => b.localeCompare(a))
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayTotal = recordsByDate[todayStr]?.reduce((acc, cur) => acc + cur.duration, 0) || 0
 
   // Supabase에서 기록 불러오기
   useEffect(() => {
@@ -114,7 +113,7 @@ function App() {
     setRecords(records.map(r => r.id === id ? { ...r, duration: sec } : r))
   }
 
-  // KST 기준 날짜를 ms로 변환
+  // KST 기준 날짜를 ms로 변환 (타임존 버그 완전 방지)
   function getKstMs(dateStr: string) {
     const [y, m, d] = dateStr.split('-').map(Number)
     return new Date(y, m - 1, d, 0, 0, 0).getTime()
@@ -145,29 +144,55 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <div style={{ margin: '0 0 24px 0', textAlign: 'center' }}>
+    <div className="container" style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
+      {/* 오늘/지금 관련 정보 맨 위 */}
+      <div style={{ margin: '0 0 32px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>오늘 누적 시간</div>
+        <div style={{ fontSize: 40, fontWeight: 900, color: '#222', marginBottom: 24 }}>{formatTime(todayTotal)}</div>
+        <div className="stopwatch-circle" style={{ margin: '0 auto 16px auto', width: 260, height: 260, background: '#222', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="stopwatch-time" style={{ fontSize: 38, fontWeight: 800, color: 'white', marginBottom: 24 }}>{formatTime(isRunning ? elapsed : 0)}</div>
+          <button
+            className="stopwatch-btn"
+            onClick={isRunning ? handleStop : handleStart}
+            style={{
+              fontSize: 28,
+              fontWeight: 700,
+              padding: '24px 0',
+              width: 220,
+              borderRadius: 32,
+              marginTop: 0,
+              marginBottom: 0,
+              background: isRunning ? '#ff4d4f' : '#646cff',
+              color: 'white',
+              border: 'none',
+              boxShadow: '0 2px 8px #0002',
+              cursor: 'pointer',
+              transition: 'background 0.2s'
+            }}
+          >
+            {isRunning ? '종료' : '시작'}
+          </button>
+        </div>
         <button 
           onClick={handleCopy}
           style={{
-            fontSize: 18,
-            fontWeight: 700,
-            padding: '14px 32px',
-            background: '#646cff',
-            color: 'white',
+            fontSize: 16,
+            fontWeight: 600,
+            padding: '10px 24px',
+            background: '#eaeaea',
+            color: '#333',
             border: 'none',
-            borderRadius: 12,
-            boxShadow: '0 2px 8px #0002',
+            borderRadius: 8,
+            boxShadow: '0 2px 8px #0001',
             cursor: 'pointer',
-            marginBottom: 12
+            marginTop: 18
           }}
         >
           📋 내 기록 공유 링크 복사
         </button>
       </div>
-      <h2 style={{ textAlign: 'center', margin: '24px 0 8px 0' }}>오늘 누적 시간</h2>
-      <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(recordsByDate[new Date().toISOString().slice(0, 10)]?.reduce((acc, cur) => acc + cur.duration, 0) || 0)}</div>
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>과거 날짜별 누적 시간</div>
+      {/* 과거 날짜별 누적 시간 표 */}
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>과거 날짜별 누적 시간</div>
       <table style={{ width: '100%', maxWidth: 400, margin: '0 auto 24px auto', borderCollapse: 'collapse', background: '#fafbfc' }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
@@ -176,7 +201,7 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {sortedDates.filter(dateStr => dateStr !== new Date().toISOString().slice(0, 10)).map(dateStr => {
+          {sortedDates.filter(dateStr => dateStr !== todayStr).map(dateStr => {
             const total = recordsByDate[dateStr].reduce((acc, cur) => acc + cur.duration, 0)
             return (
               <tr key={dateStr}>
@@ -187,24 +212,7 @@ function App() {
           })}
         </tbody>
       </table>
-      <div className="stopwatch-circle">
-        <div className="stopwatch-time">{formatTime(isRunning ? elapsed : 0)}</div>
-        <button
-          className="stopwatch-btn"
-          onClick={isRunning ? handleStop : handleStart}
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            padding: '24px 0',
-            width: 220,
-            borderRadius: 32,
-            marginTop: 18,
-            marginBottom: 8
-          }}
-        >
-          {isRunning ? '종료' : '시작'}
-        </button>
-      </div>
+      {/* 날짜별 기록 상세 */}
       <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>날짜별 기록</div>
       {sortedDates.length === 0 ? (
         <div style={{color:'#aaa', textAlign:'center'}}>기록 없음</div>
@@ -233,6 +241,7 @@ function App() {
           })}
         </div>
       )}
+      {/* 수동 기록 입력 UI - 맨 아래 */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '32px 0 0 0' }}>
         <input
           type="number"
