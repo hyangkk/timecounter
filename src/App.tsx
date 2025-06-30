@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import './App.css'
 import type { User } from '@supabase/supabase-js'
+import React from 'react'
 
 function formatTime(sec: number) {
   const h = String(Math.floor(sec / 3600)).padStart(2, '0')
@@ -73,6 +74,15 @@ function App() {
     }
   }, [])
 
+  // 타이머 정리 (컴포넌트 언마운트 시)
+  useEffect(() => {
+    return () => {
+      if (timerId) {
+        clearInterval(timerId)
+      }
+    }
+  }, [timerId])
+
   // 스톱워치 시작
   const handleStart = () => {
     setIsRunning(true)
@@ -136,7 +146,7 @@ function App() {
     setAdding(true)
     const ms = getKstMs(manualDate)
     const { data } = await supabase.from('records').insert([
-      { user_id: userId, start: ms, end: ms, duration: sec }
+      { user_id: userId, start: ms, end: ms + (sec * 1000), duration: sec }
     ]).select()
     if (data) setRecords([data[0], ...records])
     setManualSec('')
@@ -223,8 +233,8 @@ function App() {
           {[todayStr, ...sortedDates.filter(dateStr => dateStr !== todayStr)].map(dateStr => {
             const total = recordsByDate[dateStr]?.reduce((acc, cur) => acc + cur.duration, 0) || 0
             return (
-              <>
-                <tr key={dateStr} style={dateStr === todayStr ? { background: '#eaf6ff' } : {}}>
+              <React.Fragment key={dateStr}>
+                <tr style={dateStr === todayStr ? { background: '#eaf6ff' } : {}}>
                   <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center', fontWeight: dateStr === todayStr ? 700 : 400 }}>
                     {dateStr === todayStr ? '오늘' : dateStr}
                   </td>
@@ -255,7 +265,7 @@ function App() {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             )
           })}
         </tbody>
