@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import './App.css'
-import type { Session, User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 
 function formatTime(sec: number) {
   const h = String(Math.floor(sec / 3600)).padStart(2, '0')
