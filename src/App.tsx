@@ -151,7 +151,8 @@ function App() {
       {/* 오늘/지금 관련 정보 맨 위 */}
       <div style={{ margin: '0 0 32px 0', textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>오늘 누적 시간</div>
-        <div style={{ fontSize: 40, fontWeight: 900, color: '#222', marginBottom: 24 }}>{formatTime(todayTotal)}</div>
+        <div style={{ fontSize: 40, fontWeight: 900, color: '#222', marginBottom: 4 }}>{formatTime(todayTotal)}</div>
+        <div style={{ fontSize: 15, color: '#888', marginBottom: 16 }}>{(recordsByDate[todayStr]?.length || 0)}회</div>
         <div className="stopwatch-circle" style={{
           margin: '0 auto 16px auto',
           width: 320,
@@ -207,26 +208,8 @@ function App() {
           📋 내 기록 공유 링크 복사
         </button>
       </div>
-      {/* 오늘의 기록 펼쳐서 모두 보여주기 */}
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>오늘의 기록</div>
-      {recordsByDate[todayStr] && recordsByDate[todayStr].length > 0 ? (
-        <ul>
-          {recordsByDate[todayStr].map((rec) => (
-            <li key={rec.id}>
-              {formatTime(rec.duration)}
-              {rec.start !== rec.end && (
-                <> (시작: {new Date(rec.start).toLocaleTimeString()} ~ 종료: {new Date(rec.end).toLocaleTimeString()})</>
-              )}
-              <button onClick={() => handleEdit(rec.id)} style={{marginLeft:8}}>수정</button>
-              <button onClick={() => handleDelete(rec.id)} style={{marginLeft:4}}>삭제</button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div style={{color:'#aaa', textAlign:'center'}}>오늘 기록 없음</div>
-      )}
-      {/* 과거 날짜별 누적 시간 표 + 자세히 보기 */}
-      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>과거 기록</div>
+      {/* 날짜별 누적 시간 표 + 자세히 보기 (오늘 포함, 오늘이 맨 위) */}
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 700, fontSize: 20 }}>기록</div>
       <table style={{ width: '100%', maxWidth: 400, margin: '0 auto 24px auto', borderCollapse: 'collapse', background: '#fafbfc' }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
@@ -236,13 +219,17 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {sortedDates.filter(dateStr => dateStr !== todayStr).map(dateStr => {
-            const total = recordsByDate[dateStr].reduce((acc, cur) => acc + cur.duration, 0)
+          {[todayStr, ...sortedDates.filter(dateStr => dateStr !== todayStr)].map(dateStr => {
+            const total = recordsByDate[dateStr]?.reduce((acc, cur) => acc + cur.duration, 0) || 0
             return (
               <>
-                <tr key={dateStr}>
-                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{dateStr}</td>
-                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{formatTime(total)}</td>
+                <tr key={dateStr} style={dateStr === todayStr ? { background: '#eaf6ff' } : {}}>
+                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center', fontWeight: dateStr === todayStr ? 700 : 400 }}>
+                    {dateStr === todayStr ? '오늘' : dateStr}
+                  </td>
+                  <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center', fontWeight: dateStr === todayStr ? 700 : 400 }}>
+                    {formatTime(total)}
+                  </td>
                   <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
                     <button onClick={() => setOpenDetail(openDetail === dateStr ? null : dateStr)} style={{fontSize:15, fontWeight:600, padding:'6px 16px', borderRadius:6, border:'1px solid #aaa', background:'#fff', cursor:'pointer'}}>
                       {openDetail === dateStr ? '닫기' : '자세히 보기'}
@@ -253,7 +240,7 @@ function App() {
                   <tr>
                     <td colSpan={3} style={{ background:'#f9f9f9', padding:12 }}>
                       <ul style={{margin:0}}>
-                        {recordsByDate[dateStr].map((rec) => (
+                        {recordsByDate[dateStr]?.map((rec) => (
                           <li key={rec.id}>
                             {formatTime(rec.duration)}
                             {rec.start !== rec.end && (
