@@ -128,6 +128,12 @@ function App() {
     alert('공유 링크가 복사되었습니다!')
   }
 
+  // KST 기준 날짜를 ms로 변환
+  function getKstMs(dateStr: string) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d, 0, 0, 0).getTime()
+  }
+
   // 수동 기록 추가
   const handleAddManual = async () => {
     const sec = parseInt(manualSec)
@@ -136,9 +142,8 @@ function App() {
       return
     }
     setAdding(true)
-    // 선택한 날짜의 00:00:00 기준 timestamp
-    const date = new Date(manualDate + 'T00:00:00')
-    const ms = date.getTime()
+    // KST 기준 날짜의 00:00:00
+    const ms = getKstMs(manualDate)
     const { data } = await supabase.from('records').insert([
       { user_id: userId, start: ms, end: ms, duration: sec }
     ]).select()
@@ -169,25 +174,27 @@ function App() {
         </button>
       </div>
       <h2 style={{ textAlign: 'center', margin: '24px 0 8px 0' }}>오늘 누적 시간</h2>
-      <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(todayTotal)}</div>
-      <div className="stopwatch-circle">
-        <div className="stopwatch-time">{formatTime(isRunning ? elapsed : 0)}</div>
-        <button
-          className="stopwatch-btn"
-          onClick={isRunning ? handleStop : handleStart}
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            padding: '24px 0',
-            width: 220,
-            borderRadius: 32,
-            marginTop: 18,
-            marginBottom: 8
-          }}
-        >
-          {isRunning ? '종료' : '시작'}
-        </button>
-      </div>
+      <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{formatTime(recordsByDate[new Date().toISOString().slice(0, 10)]?.reduce((acc, cur) => acc + cur.duration, 0) || 0)}</div>
+      <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>과거 날짜별 누적 시간</div>
+      <table style={{ width: '100%', maxWidth: 400, margin: '0 auto 24px auto', borderCollapse: 'collapse', background: '#fafbfc' }}>
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            <th style={{ padding: 8, border: '1px solid #ddd' }}>날짜</th>
+            <th style={{ padding: 8, border: '1px solid #ddd' }}>누적 시간</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedDates.filter(dateStr => dateStr !== new Date().toISOString().slice(0, 10)).map(dateStr => {
+            const total = recordsByDate[dateStr].reduce((acc, cur) => acc + cur.duration, 0)
+            return (
+              <tr key={dateStr}>
+                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{dateStr}</td>
+                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>{formatTime(total)}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
       <div style={{ margin: '32px 0 16px 0', fontWeight: 600 }}>날짜별 기록</div>
       {sortedDates.length === 0 ? (
         <div style={{color:'#aaa', textAlign:'center'}}>기록 없음</div>
