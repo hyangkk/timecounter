@@ -45,17 +45,18 @@ function App() {
   })
   const [adding, setAdding] = useState(false)
 
-  // 날짜별로 기록 그룹핑
+  // 날짜별로 기록 그룹핑 (KST 기준)
   const recordsByDate: { [date: string]: RecordItem[] } = {}
   records.forEach(r => {
     const d = new Date(r.start)
-    const dateStr = d.toISOString().slice(0, 10)
+    const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
     if (!recordsByDate[dateStr]) recordsByDate[dateStr] = []
     recordsByDate[dateStr].push(r)
   })
-  const sortedDates = Object.keys(recordsByDate).sort((a, b) => b.localeCompare(a))
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const today = new Date()
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
   const todayTotal = recordsByDate[todayStr]?.reduce((acc, cur) => acc + cur.duration, 0) || 0
+  const sortedDates = Object.keys(recordsByDate).sort((a, b) => b.localeCompare(a))
 
   // Supabase에서 기록 불러오기
   useEffect(() => {
