@@ -32,9 +32,7 @@ function getUserIdFromUrlOrLocal() {
 }
 
 function App() {
-  const [isRunning, setIsRunning] = useState(false)
   const [startTime, setStartTime] = useState<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
   const [records, setRecords] = useState<RecordItem[]>([])
   const timerRef = useRef<number | null>(null)
   const userId = getUserIdFromUrlOrLocal();
@@ -45,7 +43,6 @@ function App() {
     const d = new Date(r.start)
     return d.toISOString().slice(0, 10) === todayStr
   })
-  const todayTotal = todayRecords.reduce((acc, cur) => acc + cur.duration, 0)
 
   // 수동 기록 입력 상태
   const [manualSec, setManualSec] = useState('')
@@ -76,33 +73,6 @@ function App() {
       if (data) setRecords(data)
     })()
   }, [userId])
-
-  // 스톱워치 시작
-  const handleStart = () => {
-    setIsRunning(true)
-    const now = Date.now()
-    setStartTime(now)
-    timerRef.current = window.setInterval(() => {
-      setElapsed(Math.floor((Date.now() - now) / 1000))
-    }, 1000)
-  }
-
-  // 스톱워치 종료
-  const handleStop = async () => {
-    setIsRunning(false)
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (startTime) {
-      const end = Date.now()
-      const duration = Math.floor((end - startTime) / 1000)
-      // Supabase에 기록 추가
-      const { data } = await supabase.from('records').insert([
-        { user_id: userId, start: startTime, end, duration }
-      ]).select()
-      if (data) setRecords([data[0], ...records])
-      setElapsed(0)
-      setStartTime(null)
-    }
-  }
 
   // 기록 삭제
   const handleDelete = async (id: number) => {
